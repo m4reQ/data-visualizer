@@ -15,8 +15,10 @@ class PandasModel(QAbstractTableModel):
 
     def data(self, index: QModelIndex, role: int = 0) -> Any:
         if role == Qt.ItemDataRole.DisplayRole:
-            data = self._data.iat[index.row(), index.column()]
-            return str(data)
+            if index.column() == 0:
+                return str(self._data.index[index.row()])
+
+            return str(self._data.iat[index.row(), index.column()])
 
     def rowCount(self, _: QModelIndex = QModelIndex()) -> int:
         return self._data.shape[0]
@@ -27,6 +29,9 @@ class PandasModel(QAbstractTableModel):
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = 0) -> Any:
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
+                if section == 0:
+                    return self._data.index.name
+
                 return self._data.columns[section]
 
             if orientation == Qt.Orientation.Vertical:
