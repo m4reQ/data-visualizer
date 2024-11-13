@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>800</width>
-    <height>600</height>
+    <height>578</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -21,7 +21,7 @@
        <string/>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>-1</number>
       </property>
      </widget>
     </item>
@@ -36,7 +36,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_file">
@@ -52,6 +52,8 @@
     <property name="title">
      <string>Tools</string>
     </property>
+    <addaction name="action_generate_graph"/>
+    <addaction name="action_generate_histogram"/>
    </widget>
    <addaction name="menu_file"/>
    <addaction name="menu_tools"/>
@@ -370,6 +372,16 @@
   <action name="action_open_recent">
    <property name="text">
     <string>Open Recent...</string>
+   </property>
+  </action>
+  <action name="action_generate_graph">
+   <property name="text">
+    <string>Graph...</string>
+   </property>
+  </action>
+  <action name="action_generate_histogram">
+   <property name="text">
+    <string>Histogram...</string>
    </property>
   </action>
  </widget>

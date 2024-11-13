@@ -10,6 +10,9 @@ class PandasModel(QAbstractTableModel):
 
         self._data = df
 
+    def get_data(self) -> pd.DataFrame:
+        return self._data
+
     def data(self, index: QModelIndex, role: int = 0) -> Any:
         if role == Qt.ItemDataRole.DisplayRole:
             data = self._data.iat[index.row(), index.column()]

@@ -1,4 +1,5 @@
 import traceback
+import typing as t
 
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
@@ -10,6 +11,14 @@ _HEADER_COLOR = QColor('#fa1807')
 _TEXT_COLOR = QColor('#7d0000')
 
 class ErrorWindow(QMainWindow):
+    @classmethod
+    def open_blocking(cls, parent: QWidget, exc: Exception) -> t.Self:
+        win = cls(parent, exc)
+        win.setWindowModality(Qt.WindowModality.ApplicationModal)
+        win.show()
+
+        return win
+
     def __init__(self, parent: QWidget, exc: Exception) -> None:
         super().__init__(parent)
 
