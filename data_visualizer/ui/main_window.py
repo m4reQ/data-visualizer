@@ -1,11 +1,14 @@
+import os
+
 import pandas as pd
 from PyQt6 import uic
 from PyQt6.QtCore import QSettings, pyqtSlot
 from PyQt6.QtGui import QAction, QCloseEvent
-from PyQt6.QtWidgets import QFileDialog, QLineEdit, QMainWindow, QTabWidget
+from PyQt6.QtWidgets import (QFileDialog, QHeaderView, QLineEdit, QMainWindow,
+                             QTableView, QTabWidget)
 
-from data_visualizer.data_importer import (CSVImporterConfig, ImporterSettings,
-                                           ImporterType)
+from data_visualizer.data_importer import ImporterSettings, ImporterType
+from data_visualizer.models.pandas_model import PandasModel
 from data_visualizer.ui.csv_import_window import CSVImportWindow
 from data_visualizer.ui.error_window import ErrorWindow
 
@@ -50,16 +53,32 @@ class MainWindow(QMainWindow):
         data: pd.DataFrame
         match settings:
             case ImporterSettings(ImporterType.CSV, filepath, config):
-                assert isinstance(config, CSVImporterConfig)
-
-                data = pd.read_csv(
-                    filepath,
-                    low_memory=False,
-                    sep=config.separator,
-                    names=[x[0] for x in config.column_settings],
-                    dtype={k: v for k, v in config.column_settings})
+                if config is None:
+                    data = pd.read_csv(
+                        filepath,
+                        low_memory=False)
+                else:
+                    data = pd.read_csv(
+                        filepath,
+                        low_memory=False,
+                        sep=config.separator,
+                        names=[x[0] for x in config.column_settings],
+                        dtype={k: v for k, v in config.column_settings})
 
         return data
+
+    def _create_tableview_for_dataframe(self, df: pd.DataFrame) -> QTableView:
+        data_tableview = QTableView()
+        data_tableview.setModel(PandasModel(df))
+
+        horizontal_header = data_tableview.horizontalHeader()
+        assert horizontal_header is not None
+
+        horizontal_header.setStretchLastSection(True)
+
+        data_tableview.setHorizontalHeader(horizontal_header)
+
+        return data_tableview
 
     @pyqtSlot(ImporterSettings)
     def _import_requested_cb(self, settings: ImporterSettings) -> None:
@@ -69,7 +88,11 @@ class MainWindow(QMainWindow):
             error_window = ErrorWindow(self, exc)
             error_window.show()
 
-        pass
+            return
+
+        self.opened_editors.addTab(
+            self._create_tableview_for_dataframe(data),
+            os.path.basename(settings.filepath))
 
     @pyqtSlot()
     def _open_action_callback(self) -> None:

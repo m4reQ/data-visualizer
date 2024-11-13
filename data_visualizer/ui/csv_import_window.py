@@ -85,21 +85,23 @@ class CSVImportWindow(QMainWindow):
 
     @pyqtSlot()
     def _import_clicked_cb(self) -> None:
-        model = self.columns_settings.model()
-        assert isinstance(model, ColumnSettingsModel)
-
-        column_settings = model.get_data()
-        separator = self.column_separator.text()
         filepath = self.filepath_edit.text()
 
-        settings = ImporterSettings(
-            ImporterType.CSV,
-            filepath,
-            CSVImporterConfig(
-                True,
-                separator,
-                column_settings))
-        self.import_requested.emit(settings)
+        config: CSVImporterConfig | None = None
+        if self.csv_settings_select_group.checkedButton() == self.settings_manual:
+            model = self.columns_settings.model()
+            assert isinstance(model, ColumnSettingsModel)
+
+            config = CSVImporterConfig(
+                    True,
+                    self.column_separator.text(),
+                    model.get_data())
+
+        self.import_requested.emit(
+            ImporterSettings(
+                ImporterType.CSV,
+                filepath,
+                config))
 
         self.close()
 
