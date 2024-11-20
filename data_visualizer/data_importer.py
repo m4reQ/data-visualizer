@@ -1,6 +1,7 @@
 import dataclasses
 import enum
 
+DEFAULT_CSV_SEPARATOR = ','
 
 class ImporterType(enum.Enum):
     CSV = enum.auto()
@@ -8,11 +9,13 @@ class ImporterType(enum.Enum):
 @dataclasses.dataclass
 class CSVImporterConfig:
     auto_detect: bool
-    separator: str = ''
-    column_settings: list[tuple[str, type]] = dataclasses.field(default_factory=list)
+    index_column: int
+    separator: str = DEFAULT_CSV_SEPARATOR
+    datetime_format: str | None = None
+    column_settings: list[tuple[str, type]] | None = None
 
 @dataclasses.dataclass
 class ImporterSettings:
     importer_type: ImporterType
     filepath: str
-    config: CSVImporterConfig | None = None
+    config: CSVImporterConfig

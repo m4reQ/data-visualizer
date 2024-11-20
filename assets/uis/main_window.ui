@@ -359,6 +359,7 @@
     </layout>
    </widget>
   </widget>
+  <widget class="StatusBar" name="status_bar"/>
   <action name="action_open">
    <property name="text">
     <string>Open...</string>
@@ -385,6 +386,13 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>StatusBar</class>
+   <extends>QStatusBar</extends>
+   <header>data_visualizer.ui.status_bar</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

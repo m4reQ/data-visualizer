@@ -5,16 +5,16 @@ from PyQt6 import uic
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt6.QtWidgets import (QAbstractButton, QButtonGroup, QComboBox,
                              QFileDialog, QFrame, QLineEdit, QMainWindow,
-                             QPushButton, QRadioButton, QTableView,
+                             QPushButton, QRadioButton, QSpinBox, QTableView,
                              QToolButton, QWidget)
 
-from data_visualizer.data_importer import (CSVImporterConfig, ImporterSettings,
+from data_visualizer.data_importer import (DEFAULT_CSV_SEPARATOR,
+                                           CSVImporterConfig, ImporterSettings,
                                            ImporterType)
 from data_visualizer.models.column_settings_model import ColumnSettingsModel
 
 _UI_FILEPATH = './assets/uis/import_csv.ui'
-_MANUAL_SETTINGS_BUTTON_IDX = 1
-_DEFAULT_CSV_SEPARATOR = ','
+_AUTO_SETTINGS_BUTTON_IDX = 1 # FIXME Changing layout changes buttons indices get this another way
 _PD_DATATYPES: list[tuple[str, type]] = sorted([
     ('Datetime', pd.Timestamp),
     ('Time Delta', pd.Timedelta),
@@ -47,6 +47,8 @@ class CSVImportWindow(QMainWindow):
         self.column_data_type: QComboBox
         self.add_column: QPushButton
         self.import_button: QPushButton
+        self.datetime_format: QLineEdit
+        self.index_column: QSpinBox
 
         uic.load_ui.loadUi(_UI_FILEPATH, self)
 
@@ -70,10 +72,10 @@ class CSVImportWindow(QMainWindow):
         self.column_data_type.setCurrentIndex(0)
 
     def _select_default_import_type_button(self) -> None:
-        self.csv_settings_select_group.buttons()[0].setChecked(True)
+        self.csv_settings_select_group.buttons()[_AUTO_SETTINGS_BUTTON_IDX].setChecked(True)
 
     def _configure_default_manual_settings(self) -> None:
-        self.column_separator.setText(_DEFAULT_CSV_SEPARATOR)
+        self.column_separator.setText(DEFAULT_CSV_SEPARATOR)
         self._set_manual_settings_widgets_enabled(False)
 
     def _set_manual_settings_widgets_enabled(self, enabled: bool) -> None:
@@ -81,21 +83,36 @@ class CSVImportWindow(QMainWindow):
         self.columns_settings.setEnabled(enabled)
         self.column_name.setEnabled(enabled)
         self.column_data_type.setEnabled(enabled)
+        self.datetime_format.setEnabled(enabled)
         self.add_column.setEnabled(enabled)
+
+    def _get_column_settings(self) -> list[tuple[str, type]] | None:
+        model = self.columns_settings.model()
+        assert isinstance(model, ColumnSettingsModel)
+
+        column_settings = model.get_data()
+        if len(column_settings) == 0:
+            return None
+
+        return column_settings
+
+    def _get_datetime_format(self) -> str | None:
+        datetime_format = self.datetime_format.text()
+        if not datetime_format:
+            return None
+
+        return datetime_format
 
     @pyqtSlot()
     def _import_clicked_cb(self) -> None:
         filepath = self.filepath_edit.text()
 
-        config: CSVImporterConfig | None = None
+        config = CSVImporterConfig(True, self.index_column.value())
         if self.csv_settings_select_group.checkedButton() == self.settings_manual:
-            model = self.columns_settings.model()
-            assert isinstance(model, ColumnSettingsModel)
-
-            config = CSVImporterConfig(
-                    True,
-                    self.column_separator.text(),
-                    model.get_data())
+            # FIXME This won't work if user deletes default separator and leaves field empty
+            config.separator = self.column_separator.text()
+            config.datetime_format = self._get_datetime_format()
+            config.column_settings = self._get_column_settings()
 
         self.import_requested.emit(
             ImporterSettings(
@@ -135,7 +152,7 @@ class CSVImportWindow(QMainWindow):
 
     @pyqtSlot(QAbstractButton, bool)
     def _import_button_toggled_cb(self, button: QAbstractButton, is_checked: bool) -> None:
-        if self.csv_settings_select_group.buttons().index(button) != _MANUAL_SETTINGS_BUTTON_IDX:
+        if self.csv_settings_select_group.buttons().index(button) == _AUTO_SETTINGS_BUTTON_IDX:
             return
 
         self._set_manual_settings_widgets_enabled(is_checked)
