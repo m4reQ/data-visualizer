@@ -116,6 +116,7 @@ class MainWindow(QMainWindow):
     def _open_graph_window(self) -> None:
         GraphExToolWindow.open_blocking(
             self,
+            self.settings,
             self._get_current_data_model().get_data())
 
     @pyqtSlot(Exception)
