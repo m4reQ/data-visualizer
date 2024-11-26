@@ -1,21 +1,19 @@
 import datetime
 import io
-import random
-import time
 import typing as t
 
-import numpy as np
 import pandas as pd
 import pyqtgraph  # type: ignore[import-untyped]
 from dateutil import relativedelta
 from PyQt6 import uic
 from PyQt6.QtCore import QSettings, Qt, pyqtSlot
-from PyQt6.QtGui import QCloseEvent, QColor, QPen
-from PyQt6.QtWidgets import (QCalendarWidget, QLabel, QMainWindow, QSpinBox,
+from PyQt6.QtGui import QCloseEvent
+from PyQt6.QtWidgets import (QCalendarWidget, QLabel, QMainWindow, QTabWidget,
                              QWidget)
 
-_MIN_COLOR = 128
-_MAX_COLOR = 255
+from data_visualizer.ui.widgets.plot_config_widget import PlotConfigWidget
+from data_visualizer.ui.widgets.plot_dock_widget import PlotDockWidget
+
 
 class GraphExToolWindow(QMainWindow):
     UI_FILEPATH = './assets/uis/graph_ex_window.ui'
@@ -42,20 +40,24 @@ class GraphExToolWindow(QMainWindow):
 
         self.settings = settings
 
-        self.graph_widget: pyqtgraph.PlotWidget
-        self.y_axis_min: QSpinBox
-        self.y_axis_max: QSpinBox
         self.from_calendar: QCalendarWidget
         self.to_calendar: QCalendarWidget
         self.period_length: QLabel
+        self.plot_configs: QTabWidget
 
         self.data = data
         self.series = dict[str, pyqtgraph.PlotDataItem]()
 
         uic.load_ui.loadUi(self.UI_FILEPATH, self)
 
+        date_min: datetime.date = self.data.index.min().date()
+        date_max: datetime.date = self.data.index.max().date()
+
         self._restore_geometry()
-        self._configure()
+        self._configure_period_length(date_min, date_max)
+        self._configure_range_calendars(date_min, date_max)
+        self._configure_plot_config_widgets(data)
+        self._plot_widgets = self._configure_plot_widgets(data)
 
     def closeEvent(self, a0: QCloseEvent | None) -> None:
         self.settings.setValue(self._SETTINGS_GEOMETRY_NAME, self.saveGeometry())
@@ -65,27 +67,19 @@ class GraphExToolWindow(QMainWindow):
 
     @pyqtSlot()
     def _date_range_changed_cb(self) -> None:
-        from_date = self.from_calendar.selectedDate().toPyDate()
-        to_date = self.to_calendar.selectedDate().toPyDate()
+        min_date = self.from_calendar.selectedDate().toPyDate()
+        max_date = self.to_calendar.selectedDate().toPyDate()
 
-        self.period_length.setText(_build_period_length_str(from_date, to_date))
+        self.period_length.setText(_build_period_length_str(min_date, max_date))
 
-        from_ts = _datetime_to_unix_timestamp(from_date)
-        to_ts = _datetime_to_unix_timestamp(to_date)
+        for plot_widget in self._plot_widgets.values():
+            plot_widget.set_data_range(min_date, max_date)
 
-        self.graph_widget.setXRange(from_ts, to_ts)
+    def _change_y_axis_min(self, series_name: str, value: float) -> None:
+        self._plot_widgets[series_name].set_y_min(value)
 
-    @pyqtSlot(int)
-    def _y_axis_min_changed(self, value: int) -> None:
-        y_axis: pyqtgraph.AxisItem = self.graph_widget.plotItem.getAxis('left')
-        # FIXME Retrieve another end of the range, as it is required for this function
-        self.graph_widget.setYRange(value, y_axis.range[1])
-
-    @pyqtSlot(int)
-    def _y_axis_max_changed(self, value: int) -> None:
-        y_axis: pyqtgraph.AxisItem = self.graph_widget.plotItem.getAxis('left')
-
-        self.graph_widget.setYRange(y_axis.range[0], value)
+    def _change_y_axis_max(self, series_name: str, value: float) -> None:
+        self._plot_widgets[series_name].set_y_max(value)
 
     def _restore_geometry(self) -> None:
         geometry = self.settings.value(self._SETTINGS_GEOMETRY_NAME)
@@ -96,76 +90,67 @@ class GraphExToolWindow(QMainWindow):
         if state is not None:
             self.restoreState(state)
 
-    def _configure(self) -> None:
-        dt_min: datetime.date = self.data.index.min().date()
-        dt_max: datetime.date = self.data.index.max().date()
+    def _configure_plot_widgets(self, data: pd.DataFrame) -> dict[str, PlotDockWidget]:
+        x_axis = data.index.map(lambda x: x.timestamp())
+        widgets = dict[str, PlotDockWidget]()
 
-        self.period_length.setText(_build_period_length_str(dt_min, dt_max))
+        for column_name in data.columns:
+            column = data[column_name]
+            widget = PlotDockWidget(
+                column,
+                x_axis,
+                self.from_calendar.selectedDate().toPyDate(),
+                self.to_calendar.selectedDate().toPyDate())
 
-        self.from_calendar.setDateRange(dt_min, dt_max)
-        self.from_calendar.setSelectedDate(dt_min)
+            widgets[column_name] = widget
+
+        return widgets
+
+    def _show_plot_widget(self, series_name: str, is_shown: bool) -> None:
+        widget = self._plot_widgets[series_name]
+        if is_shown:
+            widget.setVisible(True)
+            self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, widget)
+        else:
+            self.removeDockWidget(widget)
+
+    def _configure_plot_config_widgets(self, data: pd.DataFrame) -> None:
+        # kw argument with default to prevent capturing reference to name instead of the actual value
+        # can be safely ignored as mypy doesn't know how to read lambas with default kw arguments anyway
+        for column_name in data.columns:
+            column = data[column_name]
+            self.plot_configs.addTab(
+                PlotConfigWidget(
+                    column.min(),
+                    column.max(),
+                    lambda value, name=column_name: self._change_y_axis_min(name, value), # type: ignore[misc]
+                    lambda value, name=column_name: self._change_y_axis_max(name, value), # type: ignore[misc]
+                    lambda is_shown, name=column_name: self._show_plot_widget(name, is_shown)), # type: ignore[misc]
+                column_name)
+
+    def _configure_period_length(self, date_min: datetime.date, date_max: datetime.date) -> None:
+        self.period_length.setText(_build_period_length_str(date_min, date_max))
+
+    def _configure_range_calendars(self, date_min: datetime.date, date_max: datetime.date) -> None:
+        self.from_calendar.setDateRange(date_min, date_max)
+        self.from_calendar.setSelectedDate(date_min)
         self.from_calendar.selectionChanged.connect(self._date_range_changed_cb)
 
-        self.to_calendar.setDateRange(dt_min, dt_max)
-        self.to_calendar.setSelectedDate(dt_max)
+        self.to_calendar.setDateRange(date_min, date_max)
+        self.to_calendar.setSelectedDate(date_max)
         self.to_calendar.selectionChanged.connect(self._date_range_changed_cb)
-
-        y_min = int(self.data.min().min())
-        y_max = int(self.data.max().max())
-
-        self.y_axis_min.setValue(y_min)
-        self.y_axis_min.valueChanged.connect(self._y_axis_min_changed)
-
-        self.y_axis_max.setValue(y_max)
-        self.y_axis_max.valueChanged.connect(self._y_axis_max_changed)
-
-        plot_item = self.graph_widget.plotItem
-        assert isinstance(plot_item, pyqtgraph.PlotItem)
-
-        plot_item.setAxisItems({'bottom': pyqtgraph.DateAxisItem(orientation='bottom')})
-        plot_item.addLegend()
-
-        x_axis = self.data.index.map(lambda x: x.timestamp()).to_list()
-
-        for i, (name, column) in enumerate(self.data.items()):
-            assert isinstance(name, str)
-
-            if i == 0:
-                continue
-
-            color = _get_random_qt_color(_MIN_COLOR, _MAX_COLOR)
-
-            serie = plot_item.plot(
-                x_axis,
-                column.astype(np.int64).to_list(),
-                pen=_create_pen_with_color(color),
-                name=name)
-
-            self.series[name] = serie
-
-def _get_random_qt_color(_min: int, _max: int) -> QColor:
-    return QColor(
-        int(random.uniform(_min, _max)),
-        int(random.uniform(_min, _max)),
-        int(random.uniform(_min, _max)))
-
-def _create_pen_with_color(color: QColor) -> QPen:
-    return pyqtgraph.mkPen(color=color)
-
-def _datetime_to_unix_timestamp(value: datetime.datetime | datetime.date) -> float:
-    return time.mktime(value.timetuple())
 
 def _build_period_length_str(start: datetime.date, end: datetime.date) -> str:
     string_builder = io.StringIO()
 
     period = relativedelta.relativedelta(end, start)
     if period.years > 0:
-        string_builder.write(f'{period.years} year(s), ')
+        string_builder.write(f'{period.years} year{'s' if period.years > 1 else ''},')
 
     if period.months > 0:
-        string_builder.write(f'{period.months} month(s), ')
+        string_builder.write(f'{period.months} month{'s' if period.months > 1 else ''},')
 
     if period.days > 0:
-        string_builder.write(f'{period.days} day(s)')
+        string_builder.write(f'{period.days} day{'s' if period.days > 1 else ''}')
 
     return string_builder.getvalue()

@@ -22,6 +22,7 @@ _SETTINGS_STATE_NAME = '_state'
 _SETTINGS_GEOMETRY_NAME = '_geometry'
 
 # TODO SEPARATION OF CONCERNS!!! (move logic from the ui)
+# FIXME 'pressure' column not showing up (prob invalid use of items())
 
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
