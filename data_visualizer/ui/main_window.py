@@ -4,8 +4,8 @@ import pandas as pd
 from PyQt6 import uic
 from PyQt6.QtCore import QSettings, QThreadPool, pyqtSlot
 from PyQt6.QtGui import QAction, QCloseEvent
-from PyQt6.QtWidgets import (QFileDialog, QLabel, QLineEdit, QMainWindow,
-                             QStatusBar, QTableView, QTabWidget)
+from PyQt6.QtWidgets import (QFileDialog, QLineEdit, QMainWindow, QTableView,
+                             QTabWidget)
 
 from data_visualizer.data_importer import ImporterSettings, ImporterType
 from data_visualizer.models.pandas_model import PandasModel
@@ -13,7 +13,6 @@ from data_visualizer.qt_job import Job
 from data_visualizer.ui.csv_import_window import CSVImportWindow
 from data_visualizer.ui.error_window import ErrorWindow
 from data_visualizer.ui.graph_ex_window import GraphExToolWindow
-from data_visualizer.ui.graph_window import GraphToolWindow
 from data_visualizer.ui.loading_window import LoadingWindow
 from data_visualizer.ui.status_bar import StatusBar, StatusBarStatus
 
@@ -22,7 +21,6 @@ _SETTINGS_STATE_NAME = '_state'
 _SETTINGS_GEOMETRY_NAME = '_geometry'
 
 # TODO SEPARATION OF CONCERNS!!! (move logic from the ui)
-# FIXME 'pressure' column not showing up (prob invalid use of items())
 
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
