@@ -54,13 +54,13 @@
    <widget class="QWidget" name="_unused_9">
     <layout class="QGridLayout" name="gridLayout_2">
      <property name="leftMargin">
-      <number>2</number>
+      <number>0</number>
      </property>
      <property name="topMargin">
       <number>0</number>
      </property>
      <property name="rightMargin">
-      <number>2</number>
+      <number>0</number>
      </property>
      <property name="bottomMargin">
       <number>0</number>
@@ -159,6 +159,9 @@
       <widget class="QScrollArea" name="y_axis_controls">
        <property name="frameShape">
         <enum>QFrame::NoFrame</enum>
+       </property>
+       <property name="sizeAdjustPolicy">
+        <enum>QAbstractScrollArea::AdjustToContents</enum>
        </property>
        <property name="widgetResizable">
         <bool>true</bool>

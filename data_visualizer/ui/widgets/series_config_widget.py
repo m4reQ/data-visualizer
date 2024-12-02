@@ -1,10 +1,8 @@
 from PyQt6 import uic
-from PyQt6.QtCore import (QAbstractAnimation, QParallelAnimationGroup,
-                          QPropertyAnimation, Qt, pyqtSignal, pyqtSlot)
+from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt6.QtWidgets import (QCheckBox, QDoubleSpinBox, QLabel, QScrollArea,
                              QToolButton, QWidget)
 
-ANIMATION_DURATION_MS = 100
 
 class SeriesConfigWidget(QWidget):
     UI_FILEPATH = './assets/uis/series_config_widget.ui'
@@ -21,8 +19,6 @@ class SeriesConfigWidget(QWidget):
         super().__init__(parent)
 
         self.series_name = series_name
-
-        self.toggle_animation = QParallelAnimationGroup(self)
 
         self.expand_button: QToolButton
         self.name_label: QLabel
@@ -44,42 +40,28 @@ class SeriesConfigWidget(QWidget):
 
         self.show_checkbox.clicked.connect(self._show_checked_cb)
 
-        self.contents.setMinimumHeight(0)
-        self.contents.setMaximumHeight(0)
+        self.contents_height = self.contents.layout().sizeHint().height() # type: ignore[union-attr]
+        self.expanded_height = self.sizeHint().height()
+        self.collapsed_height = self.expanded_height - self.contents_height
+
+        self.contents.setFixedHeight(0)
+        self.setFixedHeight(self.collapsed_height)
 
         self.expand_button.setCheckable(True)
-        self.expand_button.pressed.connect(self._expand_cb)
-
-        self.toggle_animation.addAnimation(QPropertyAnimation(self, b'minimumHeight'))
-        self.toggle_animation.addAnimation(QPropertyAnimation(self, b'maximumHeight'))
-        self.toggle_animation.addAnimation(QPropertyAnimation(self.contents, b'maximumHeight'))
-
-        height = self.sizeHint().height()
-        collapsed_height = height - self.contents.maximumHeight()
-        contents_height = self.contents.layout().sizeHint().height() # type: ignore[union-attr]
-
-        for i in range(self.toggle_animation.animationCount()):
-            animation = self.toggle_animation.animationAt(i)
-            assert isinstance(animation, QPropertyAnimation)
-
-            animation.setDuration(ANIMATION_DURATION_MS)
-            animation.setStartValue(collapsed_height)
-            animation.setEndValue(collapsed_height + contents_height)
-
-        content_animation = self.toggle_animation.animationAt(self.toggle_animation.animationCount() - 1)
-        assert isinstance(content_animation, QPropertyAnimation)
-
-        content_animation.setDuration(ANIMATION_DURATION_MS)
-        content_animation.setStartValue(0)
-        content_animation.setEndValue(contents_height)
+        self.expand_button.clicked.connect(self._expand_cb)
 
     @pyqtSlot()
     def _expand_cb(self) -> None:
         is_checked = self.expand_button.isChecked()
 
-        self.expand_button.setArrowType(Qt.ArrowType.RightArrow if is_checked else Qt.ArrowType.DownArrow)
-        self.toggle_animation.setDirection(QAbstractAnimation.Direction.Backward if is_checked else QAbstractAnimation.Direction.Forward)
-        self.toggle_animation.start()
+        self.expand_button.setArrowType(Qt.ArrowType.DownArrow if is_checked else Qt.ArrowType.RightArrow)
+
+        if is_checked:
+            self.contents.setFixedHeight(self.contents_height)
+            self.setFixedHeight(self.collapsed_height + self.contents_height)
+        else:
+            self.contents.setFixedHeight(0)
+            self.setFixedHeight(self.collapsed_height)
 
     @pyqtSlot(float)
     def _max_changed_cb(self, value: float) -> None:
