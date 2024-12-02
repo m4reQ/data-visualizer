@@ -173,7 +173,7 @@
   <customwidget>
    <class>ExpandableWidget</class>
    <extends>QWidget</extends>
-   <header>data_visualizer.widgets.expandable_widget</header>
+   <header>data_visualizer.ui.widgets.expandable_widget</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
