@@ -12,7 +12,7 @@ from data_visualizer.models.pandas_model import PandasModel
 from data_visualizer.qt_job import Job
 from data_visualizer.ui.csv_import_window import CSVImportWindow
 from data_visualizer.ui.error_window import ErrorWindow
-from data_visualizer.ui.graph_ex_window import GraphExToolWindow
+from data_visualizer.ui.graph_window import GraphToolWindow
 from data_visualizer.ui.loading_window import LoadingWindow
 from data_visualizer.ui.status_bar import StatusBar, StatusBarStatus
 
@@ -113,7 +113,7 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def _open_graph_window(self) -> None:
-        GraphExToolWindow.open_blocking(
+        GraphToolWindow.open_blocking(
             self,
             self.settings,
             self._get_current_data_model().get_data())

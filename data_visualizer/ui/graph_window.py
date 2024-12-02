@@ -19,7 +19,7 @@ from data_visualizer.ui.widgets.series_config_widget import SeriesConfigWidget
 
 DATE_FORMAT = '%d.%m.%Y'
 
-class GraphExToolWindow(QMainWindow):
+class GraphToolWindow(QMainWindow):
     UI_FILEPATH = './assets/uis/graph_ex_window.ui'
     _SETTINGS_GEOMETRY_NAME = 'graph_geometry'
     _SETTINGS_STATE_NAME = 'graph_state'
