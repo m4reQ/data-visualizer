@@ -8,12 +8,17 @@ from dateutil import relativedelta
 from PyQt6 import uic
 from PyQt6.QtCore import QSettings, Qt, pyqtSlot
 from PyQt6.QtGui import QCloseEvent
-from PyQt6.QtWidgets import (QCalendarWidget, QLabel, QMainWindow, QTabWidget,
-                             QWidget)
+from PyQt6.QtWidgets import (QLabel, QMainWindow, QScrollArea, QToolButton,
+                             QVBoxLayout, QWidget)
 
+from data_visualizer.ui.widgets.calendar_dialog import CalendarDialog
+from data_visualizer.ui.widgets.expandable_widget import ExpandableWidget
 from data_visualizer.ui.widgets.plot_config_widget import PlotConfigWidget
 from data_visualizer.ui.widgets.plot_dock_widget import PlotDockWidget
 
+# TODO Use single GraphicsLayoutWidget (possibly with ScrollArea) to display mutliple plots and gain some performance
+
+DATE_FORMAT = '%d.%m.%Y'
 
 class GraphExToolWindow(QMainWindow):
     UI_FILEPATH = './assets/uis/graph_ex_window.ui'
@@ -39,25 +44,30 @@ class GraphExToolWindow(QMainWindow):
         super().__init__(parent)
 
         self.settings = settings
-
-        self.from_calendar: QCalendarWidget
-        self.to_calendar: QCalendarWidget
-        self.period_length: QLabel
-        self.plot_configs: QTabWidget
-
         self.data = data
+        self.min_date: datetime.date = self.data.index.min().date()
+        self.max_date: datetime.date = self.data.index.max().date()
+        self.start_date = self.min_date
+        self.end_date = self.max_date
         self.series = dict[str, pyqtgraph.PlotDataItem]()
+        self.plot_widgets = _create_plot_widgets(data, self.start_date, self.end_date)
+
+        self.period_label: QLabel
+        self.period_end_button: QToolButton
+        self.period_end_label: QLabel
+        self.period_start_button: QToolButton
+        self.period_start_label: QLabel
+        self.y_axis_controls: QScrollArea
 
         uic.load_ui.loadUi(self.UI_FILEPATH, self)
 
-        date_min: datetime.date = self.data.index.min().date()
-        date_max: datetime.date = self.data.index.max().date()
-
         self._restore_geometry()
-        self._configure_period_length(date_min, date_max)
-        self._configure_range_calendars(date_min, date_max)
-        self._configure_plot_config_widgets(data)
-        self._plot_widgets = self._configure_plot_widgets(data)
+
+        self.period_label.setText(_build_period_length_str(self.start_date, self.end_date))
+        self.period_start_label.setText(_format_date(self.start_date))
+        self.period_end_label.setText(_format_date(self.end_date))
+        self.period_start_button.clicked.connect(self._start_date_changed_cb)
+        self.period_end_button.clicked.connect(self._end_date_changed_cb)
 
     def closeEvent(self, a0: QCloseEvent | None) -> None:
         self.settings.setValue(self._SETTINGS_GEOMETRY_NAME, self.saveGeometry())
@@ -66,20 +76,38 @@ class GraphExToolWindow(QMainWindow):
         super().closeEvent(a0)
 
     @pyqtSlot()
-    def _date_range_changed_cb(self) -> None:
-        min_date = self.from_calendar.selectedDate().toPyDate()
-        max_date = self.to_calendar.selectedDate().toPyDate()
+    def _start_date_changed_cb(self) -> None:
+        self.start_date = CalendarDialog.get_date(
+            'Select start date',
+            self.min_date,
+            self.max_date,
+            self.start_date,
+            self)
 
-        self.period_length.setText(_build_period_length_str(min_date, max_date))
+        self.period_start_label.setText(_format_date(self.start_date))
+        self.period_label.setText(_build_period_length_str(self.start_date, self.end_date))
 
-        for plot_widget in self._plot_widgets.values():
-            plot_widget.set_data_range(min_date, max_date)
+        self._reconfigure_plots()
+
+    @pyqtSlot()
+    def _end_date_changed_cb(self) -> None:
+        self.end_date = CalendarDialog.get_date(
+            'Select end date',
+            self.min_date,
+            self.max_date,
+            self.end_date,
+            self)
+
+        self.period_end_label.setText(_format_date(self.end_date))
+        self.period_label.setText(_build_period_length_str(self.start_date, self.end_date))
+
+        self._reconfigure_plots()
 
     def _change_y_axis_min(self, series_name: str, value: float) -> None:
-        self._plot_widgets[series_name].set_y_min(value)
+        self.plot_widgets[series_name].set_y_min(value)
 
     def _change_y_axis_max(self, series_name: str, value: float) -> None:
-        self._plot_widgets[series_name].set_y_max(value)
+        self.plot_widgets[series_name].set_y_max(value)
 
     def _restore_geometry(self) -> None:
         geometry = self.settings.value(self._SETTINGS_GEOMETRY_NAME)
@@ -90,55 +118,58 @@ class GraphExToolWindow(QMainWindow):
         if state is not None:
             self.restoreState(state)
 
-    def _configure_plot_widgets(self, data: pd.DataFrame) -> dict[str, PlotDockWidget]:
-        x_axis = data.index.map(lambda x: x.timestamp())
-        widgets = dict[str, PlotDockWidget]()
-
-        for column_name in data.columns:
-            column = data[column_name]
-            widget = PlotDockWidget(
-                column,
-                x_axis,
-                self.from_calendar.selectedDate().toPyDate(),
-                self.to_calendar.selectedDate().toPyDate())
-
-            widgets[column_name] = widget
-
-        return widgets
+    def _reconfigure_plots(self) -> None:
+        for plot_widget in self.plot_widgets.values():
+            plot_widget.set_data_range(self.start_date, self.end_date)
 
     def _show_plot_widget(self, series_name: str, is_shown: bool) -> None:
-        widget = self._plot_widgets[series_name]
+        widget = self.plot_widgets[series_name]
+
         if is_shown:
             widget.setVisible(True)
             self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, widget)
         else:
             self.removeDockWidget(widget)
 
-    def _configure_plot_config_widgets(self, data: pd.DataFrame) -> None:
-        # kw argument with default to prevent capturing reference to name instead of the actual value
-        # can be safely ignored as mypy doesn't know how to read lambas with default kw arguments anyway
-        for column_name in data.columns:
-            column = data[column_name]
-            self.plot_configs.addTab(
-                PlotConfigWidget(
-                    column.min(),
-                    column.max(),
-                    lambda value, name=column_name: self._change_y_axis_min(name, value), # type: ignore[misc]
-                    lambda value, name=column_name: self._change_y_axis_max(name, value), # type: ignore[misc]
-                    lambda is_shown, name=column_name: self._show_plot_widget(name, is_shown)), # type: ignore[misc]
-                column_name)
+        visible_widgets = [
+            x
+            for x in self.plot_widgets.values()
+            if x.isVisible()]
 
-    def _configure_period_length(self, date_min: datetime.date, date_max: datetime.date) -> None:
-        self.period_length.setText(_build_period_length_str(date_min, date_max))
+        # widget visibility is recalculated after so we have to force add or remove current widget
+        if is_shown:
+            visible_widgets.append(widget)
+        else:
+            visible_widgets.remove(widget)
 
-    def _configure_range_calendars(self, date_min: datetime.date, date_max: datetime.date) -> None:
-        self.from_calendar.setDateRange(date_min, date_max)
-        self.from_calendar.setSelectedDate(date_min)
-        self.from_calendar.selectionChanged.connect(self._date_range_changed_cb)
+        if len(visible_widgets) == 0:
+            return
 
-        self.to_calendar.setDateRange(date_min, date_max)
-        self.to_calendar.setSelectedDate(date_max)
-        self.to_calendar.selectionChanged.connect(self._date_range_changed_cb)
+        max_width_widget = max(visible_widgets, key=lambda x: x.plot_item.getAxis('left').width())
+        max_axis_width = max_width_widget.plot_item.getAxis('left').width()
+
+        for widget in visible_widgets:
+            if widget is not max_width_widget:
+                axis_width = widget.plot_item.getAxis('left').width()
+
+                margins = widget.plot_widget.contentsMargins()
+                margins.setLeft(max_axis_width - axis_width)
+
+                widget.plot_widget.setContentsMargins(margins)
+
+    # def _configure_plot_config_widgets(self, data: pd.DataFrame) -> None:
+    #     # kw argument with default to prevent capturing reference to name instead of the actual value
+    #     # can be safely ignored as mypy doesn't know how to read lambas with default kw arguments anyway
+    #     for column_name in data.columns:
+    #         column = data[column_name]
+    #         self.plot_configs.addTab(
+    #             PlotConfigWidget(
+    #                 column.min(),
+    #                 column.max(),
+    #                 lambda value, name=column_name: self._change_y_axis_min(name, value), # type: ignore[misc]
+    #                 lambda value, name=column_name: self._change_y_axis_max(name, value), # type: ignore[misc]
+    #                 lambda is_shown, name=column_name: self._show_plot_widget(name, is_shown)), # type: ignore[misc]
+    #             column_name)
 
 def _build_period_length_str(start: datetime.date, end: datetime.date) -> str:
     string_builder = io.StringIO()
@@ -148,9 +179,27 @@ def _build_period_length_str(start: datetime.date, end: datetime.date) -> str:
         string_builder.write(f'{period.years} year{'s' if period.years > 1 else ''},')
 
     if period.months > 0:
+        if period.years > 0:
+            string_builder.write(' ')
+
         string_builder.write(f'{period.months} month{'s' if period.months > 1 else ''},')
 
     if period.days > 0:
+        if period.years > 0 or period.months > 0:
+            string_builder.write(' ')
+
         string_builder.write(f'{period.days} day{'s' if period.days > 1 else ''}')
 
     return string_builder.getvalue()
+
+def _format_date(date: datetime.date) -> str:
+    return date.strftime(DATE_FORMAT)
+
+def _create_plot_widgets(data: pd.DataFrame,
+                         start_date: datetime.date,
+                         end_date: datetime.date) -> dict[str, PlotDockWidget]:
+    x_axis_values = data.index.map(lambda x: x.timestamp())
+
+    return {
+        k: PlotDockWidget(data[k], x_axis_values, start_date, end_date)
+        for k in data.columns}

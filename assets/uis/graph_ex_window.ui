@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>796</width>
-    <height>835</height>
+    <height>425</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -156,27 +156,26 @@
       </widget>
      </item>
      <item row="8" column="0" colspan="3">
-      <widget class="ExpandableWidget" name="y_axis_control_widget" native="true">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
+      <widget class="QScrollArea" name="y_axis_controls">
+       <property name="widgetResizable">
+        <bool>true</bool>
        </property>
+       <widget class="QWidget" name="y_axis_controls_contents">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>154</width>
+          <height>274</height>
+         </rect>
+        </property>
+       </widget>
       </widget>
      </item>
     </layout>
    </widget>
   </widget>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>ExpandableWidget</class>
-   <extends>QWidget</extends>
-   <header>data_visualizer.ui.widgets.expandable_widget</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>
