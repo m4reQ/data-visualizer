@@ -157,16 +157,22 @@
      </item>
      <item row="8" column="0" colspan="3">
       <widget class="QScrollArea" name="y_axis_controls">
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
        <property name="widgetResizable">
         <bool>true</bool>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
        </property>
        <widget class="QWidget" name="y_axis_controls_contents">
         <property name="geometry">
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>154</width>
-          <height>274</height>
+          <width>156</width>
+          <height>276</height>
          </rect>
         </property>
        </widget>

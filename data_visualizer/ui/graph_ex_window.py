@@ -12,9 +12,8 @@ from PyQt6.QtWidgets import (QLabel, QMainWindow, QScrollArea, QToolButton,
                              QVBoxLayout, QWidget)
 
 from data_visualizer.ui.widgets.calendar_dialog import CalendarDialog
-from data_visualizer.ui.widgets.expandable_widget import ExpandableWidget
-from data_visualizer.ui.widgets.plot_config_widget import PlotConfigWidget
 from data_visualizer.ui.widgets.plot_dock_widget import PlotDockWidget
+from data_visualizer.ui.widgets.series_config_widget import SeriesConfigWidget
 
 # TODO Use single GraphicsLayoutWidget (possibly with ScrollArea) to display mutliple plots and gain some performance
 
@@ -68,6 +67,23 @@ class GraphExToolWindow(QMainWindow):
         self.period_end_label.setText(_format_date(self.end_date))
         self.period_start_button.clicked.connect(self._start_date_changed_cb)
         self.period_end_button.clicked.connect(self._end_date_changed_cb)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(1)
+
+        for column_name in data.columns:
+            column = data[column_name]
+            widget = SeriesConfigWidget(
+                column_name,
+                column.min(),
+                column.max())
+
+            layout.addWidget(widget)
+
+        layout.addStretch()
+
+        self.y_axis_controls.setLayout(layout)
 
     def closeEvent(self, a0: QCloseEvent | None) -> None:
         self.settings.setValue(self._SETTINGS_GEOMETRY_NAME, self.saveGeometry())
@@ -176,17 +192,17 @@ def _build_period_length_str(start: datetime.date, end: datetime.date) -> str:
 
     period = relativedelta.relativedelta(end, start)
     if period.years > 0:
-        string_builder.write(f'{period.years} year{'s' if period.years > 1 else ''},')
+        string_builder.write(f'{period.years} year{'s' if period.years > 1 else ''}')
 
     if period.months > 0:
         if period.years > 0:
-            string_builder.write(' ')
+            string_builder.write(', ')
 
         string_builder.write(f'{period.months} month{'s' if period.months > 1 else ''},')
 
     if period.days > 0:
         if period.years > 0 or period.months > 0:
-            string_builder.write(' ')
+            string_builder.write(', ')
 
         string_builder.write(f'{period.days} day{'s' if period.days > 1 else ''}')
 
