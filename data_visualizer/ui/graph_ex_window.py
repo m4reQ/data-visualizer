@@ -78,6 +78,9 @@ class GraphExToolWindow(QMainWindow):
                 column_name,
                 column.min(),
                 column.max())
+            widget.min_value_changed.connect(self._change_y_axis_min)
+            widget.max_value_changed.connect(self._change_y_axis_max)
+            widget.show_checked.connect(self._set_plot_visible)
 
             layout.addWidget(widget)
 
@@ -138,7 +141,7 @@ class GraphExToolWindow(QMainWindow):
         for plot_widget in self.plot_widgets.values():
             plot_widget.set_data_range(self.start_date, self.end_date)
 
-    def _show_plot_widget(self, series_name: str, is_shown: bool) -> None:
+    def _set_plot_visible(self, series_name: str, is_shown: bool) -> None:
         widget = self.plot_widgets[series_name]
 
         if is_shown:
@@ -146,46 +149,6 @@ class GraphExToolWindow(QMainWindow):
             self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, widget)
         else:
             self.removeDockWidget(widget)
-
-        visible_widgets = [
-            x
-            for x in self.plot_widgets.values()
-            if x.isVisible()]
-
-        # widget visibility is recalculated after so we have to force add or remove current widget
-        if is_shown:
-            visible_widgets.append(widget)
-        else:
-            visible_widgets.remove(widget)
-
-        if len(visible_widgets) == 0:
-            return
-
-        max_width_widget = max(visible_widgets, key=lambda x: x.plot_item.getAxis('left').width())
-        max_axis_width = max_width_widget.plot_item.getAxis('left').width()
-
-        for widget in visible_widgets:
-            if widget is not max_width_widget:
-                axis_width = widget.plot_item.getAxis('left').width()
-
-                margins = widget.plot_widget.contentsMargins()
-                margins.setLeft(max_axis_width - axis_width)
-
-                widget.plot_widget.setContentsMargins(margins)
-
-    # def _configure_plot_config_widgets(self, data: pd.DataFrame) -> None:
-    #     # kw argument with default to prevent capturing reference to name instead of the actual value
-    #     # can be safely ignored as mypy doesn't know how to read lambas with default kw arguments anyway
-    #     for column_name in data.columns:
-    #         column = data[column_name]
-    #         self.plot_configs.addTab(
-    #             PlotConfigWidget(
-    #                 column.min(),
-    #                 column.max(),
-    #                 lambda value, name=column_name: self._change_y_axis_min(name, value), # type: ignore[misc]
-    #                 lambda value, name=column_name: self._change_y_axis_max(name, value), # type: ignore[misc]
-    #                 lambda is_shown, name=column_name: self._show_plot_widget(name, is_shown)), # type: ignore[misc]
-    #             column_name)
 
 def _build_period_length_str(start: datetime.date, end: datetime.date) -> str:
     string_builder = io.StringIO()

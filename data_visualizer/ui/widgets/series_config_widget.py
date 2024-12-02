@@ -1,6 +1,6 @@
 from PyQt6 import uic
 from PyQt6.QtCore import (QAbstractAnimation, QParallelAnimationGroup,
-                          QPropertyAnimation, Qt, pyqtBoundSignal, pyqtSlot)
+                          QPropertyAnimation, Qt, pyqtSignal, pyqtSlot)
 from PyQt6.QtWidgets import (QCheckBox, QDoubleSpinBox, QLabel, QScrollArea,
                              QToolButton, QWidget)
 
@@ -9,12 +9,18 @@ ANIMATION_DURATION_MS = 100
 class SeriesConfigWidget(QWidget):
     UI_FILEPATH = './assets/uis/series_config_widget.ui'
 
+    min_value_changed = pyqtSignal(str, float)
+    max_value_changed = pyqtSignal(str, float)
+    show_checked = pyqtSignal(str, bool)
+
     def __init__(self,
                  series_name: str,
                  y_min: float,
                  y_max: float,
                  parent: QWidget | None = None) -> None:
         super().__init__(parent)
+
+        self.series_name = series_name
 
         self.toggle_animation = QParallelAnimationGroup(self)
 
@@ -31,8 +37,12 @@ class SeriesConfigWidget(QWidget):
 
         self.max_spinbox.setRange(y_min, y_max)
         self.max_spinbox.setValue(y_max)
+        self.max_spinbox.valueChanged.connect(self._max_changed_cb)
         self.min_spinbox.setRange(y_min, y_max)
         self.min_spinbox.setValue(y_min)
+        self.min_spinbox.valueChanged.connect(self._min_changed_cb)
+
+        self.show_checkbox.clicked.connect(self._show_checked_cb)
 
         self.contents.setMinimumHeight(0)
         self.contents.setMaximumHeight(0)
@@ -71,14 +81,14 @@ class SeriesConfigWidget(QWidget):
         self.toggle_animation.setDirection(QAbstractAnimation.Direction.Backward if is_checked else QAbstractAnimation.Direction.Forward)
         self.toggle_animation.start()
 
-    @property
-    def show_checked(self) -> pyqtBoundSignal:
-        return self.show_checkbox.checkStateChanged
+    @pyqtSlot(float)
+    def _max_changed_cb(self, value: float) -> None:
+        self.max_value_changed.emit(self.series_name, value)
 
-    @property
-    def min_value_changed(self) -> pyqtBoundSignal:
-        return self.min_spinbox.valueChanged
+    @pyqtSlot(float)
+    def _min_changed_cb(self, value: float) -> None:
+        self.min_value_changed.emit(self.series_name, value)
 
-    @property
-    def max_value_changed(self) -> pyqtBoundSignal:
-        return self.max_spinbox.valueChanged
+    @pyqtSlot()
+    def _show_checked_cb(self) -> None:
+        self.show_checked.emit(self.series_name, self.show_checkbox.isChecked())
