@@ -3,14 +3,11 @@ import typing as t
 
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QLabel, QMainWindow, QWidget
 
-_UI_FILEPATH = './assets/uis/error_window.ui'
-_HEADER_COLOR = QColor('#fa1807')
-_TEXT_COLOR = QColor('#7d0000')
+ErrorWindowClass: t.TypeAlias = uic.load_ui.loadUiType('./assets/uis/error_window.ui')[0] # type: ignore
 
-class ErrorWindow(QMainWindow):
+class ErrorWindow(QMainWindow, ErrorWindowClass):
     @classmethod
     def open_blocking(cls, parent: QWidget, exc: Exception) -> t.Self:
         win = cls(parent, exc)
@@ -22,15 +19,12 @@ class ErrorWindow(QMainWindow):
     def __init__(self, parent: QWidget, exc: Exception) -> None:
         super().__init__(parent)
 
+        self.setupUi(self)
+
         self.error_header: QLabel
         self.error_text: QLabel
 
-        uic.load_ui.loadUi(_UI_FILEPATH, self)
-
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
-
-        self._set_label_color(self.error_header, _HEADER_COLOR)
-        self._set_label_color(self.error_text, _TEXT_COLOR)
 
         self.error_text.setText(''.join(traceback.format_exception(exc)))
 
@@ -41,9 +35,4 @@ class ErrorWindow(QMainWindow):
         assert layout is not None
 
         self.setFixedSize(layout.sizeHint())
-
-    def _set_label_color(self, label: QLabel, color: QColor) -> None:
-        palette = label.palette()
-        palette.setColor(label.foregroundRole(), color)
-        label.setPalette(palette)
 

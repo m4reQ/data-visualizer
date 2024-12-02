@@ -1,4 +1,5 @@
 import os
+import typing as t
 
 import pandas as pd
 from PyQt6 import uic
@@ -13,7 +14,6 @@ from data_visualizer.data_importer import (DEFAULT_CSV_SEPARATOR,
                                            ImporterType)
 from data_visualizer.models.column_settings_model import ColumnSettingsModel
 
-_UI_FILEPATH = './assets/uis/import_csv.ui'
 _AUTO_SETTINGS_BUTTON_IDX = 1 # FIXME Changing layout changes buttons indices get this another way
 _PD_DATATYPES: list[tuple[str, type]] = sorted([
     ('Datetime', pd.Timestamp),
@@ -29,11 +29,15 @@ _PD_DATATYPES: list[tuple[str, type]] = sorted([
     ('Arrow', pd.ArrowDtype)],
     key=lambda x: x[0])
 
-class CSVImportWindow(QMainWindow):
+CSVImportWindowClass: t.TypeAlias = uic.load_ui.loadUiType('./assets/uis/import_csv.ui')[0] # type: ignore
+
+class CSVImportWindow(QMainWindow, CSVImportWindowClass):
     import_requested = pyqtSignal(ImporterSettings)
 
     def __init__(self, parent: QWidget, initial_filepath: str = '') -> None:
         super().__init__(parent)
+
+        self.setupUi(self)
 
         self.filepath_edit: QLineEdit
         self.browse_files: QToolButton
@@ -49,8 +53,6 @@ class CSVImportWindow(QMainWindow):
         self.import_button: QPushButton
         self.datetime_format: QLineEdit
         self.index_column: QSpinBox
-
-        uic.load_ui.loadUi(_UI_FILEPATH, self)
 
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
 

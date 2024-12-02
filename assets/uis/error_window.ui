@@ -24,6 +24,9 @@
         <bold>true</bold>
        </font>
       </property>
+      <property name="styleSheet">
+       <string notr="true">color: rgb(250, 24, 7);</string>
+      </property>
       <property name="text">
        <string>An unexpected error occurred:</string>
       </property>
@@ -41,6 +44,9 @@
        <font>
         <pointsize>10</pointsize>
        </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color: rgb(125, 0, 0);</string>
       </property>
       <property name="text">
        <string>&lt;error_text&gt;</string>

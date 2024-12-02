@@ -1,12 +1,13 @@
+import typing as t
+
 from PyQt6 import uic
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt6.QtWidgets import (QCheckBox, QDoubleSpinBox, QLabel, QScrollArea,
                              QToolButton, QWidget)
 
+_SeriesConfigWidgetClass: t.TypeAlias = uic.load_ui.loadUiType('./assets/uis/series_config_widget.ui')[0] # type: ignore
 
-class SeriesConfigWidget(QWidget):
-    UI_FILEPATH = './assets/uis/series_config_widget.ui'
-
+class SeriesConfigWidget(QWidget, _SeriesConfigWidgetClass):
     min_value_changed = pyqtSignal(str, float)
     max_value_changed = pyqtSignal(str, float)
     show_checked = pyqtSignal(str, bool)
@@ -18,6 +19,8 @@ class SeriesConfigWidget(QWidget):
                  parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
+        self.setupUi(self)
+
         self.series_name = series_name
 
         self.expand_button: QToolButton
@@ -26,8 +29,6 @@ class SeriesConfigWidget(QWidget):
         self.max_spinbox: QDoubleSpinBox
         self.min_spinbox: QDoubleSpinBox
         self.contents: QScrollArea
-
-        uic.load_ui.loadUi(self.UI_FILEPATH, self)
 
         self.name_label.setText(series_name)
 
