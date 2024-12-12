@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>796</width>
+    <width>877</width>
     <height>425</height>
    </rect>
   </property>
@@ -72,7 +72,7 @@
       <widget class="QLabel" name="_unused_12">
        <property name="font">
         <font>
-         <pointsize>10</pointsize>
+         <pointsize>12</pointsize>
         </font>
        </property>
        <property name="text">
@@ -103,6 +103,11 @@
      </item>
      <item row="1" column="0">
       <widget class="QLabel" name="_unused">
+       <property name="font">
+        <font>
+         <pointsize>9</pointsize>
+        </font>
+       </property>
        <property name="text">
         <string>From</string>
        </property>
@@ -110,6 +115,11 @@
      </item>
      <item row="2" column="0">
       <widget class="QLabel" name="_unused_2">
+       <property name="font">
+        <font>
+         <pointsize>9</pointsize>
+        </font>
+       </property>
        <property name="text">
         <string>To</string>
        </property>
@@ -117,6 +127,11 @@
      </item>
      <item row="1" column="1">
       <widget class="QLabel" name="period_start_label">
+       <property name="font">
+        <font>
+         <pointsize>9</pointsize>
+        </font>
+       </property>
        <property name="text">
         <string>&lt;from&gt;</string>
        </property>
@@ -126,7 +141,9 @@
       <widget class="QLabel" name="_unused_13">
        <property name="font">
         <font>
-         <pointsize>10</pointsize>
+         <pointsize>12</pointsize>
+         <weight>50</weight>
+         <bold>false</bold>
         </font>
        </property>
        <property name="text">
@@ -136,6 +153,11 @@
      </item>
      <item row="3" column="0">
       <widget class="QLabel" name="_unused_3">
+       <property name="font">
+        <font>
+         <pointsize>9</pointsize>
+        </font>
+       </property>
        <property name="text">
         <string>Period Length</string>
        </property>
@@ -143,15 +165,13 @@
      </item>
      <item row="2" column="1">
       <widget class="QLabel" name="period_end_label">
+       <property name="font">
+        <font>
+         <pointsize>9</pointsize>
+        </font>
+       </property>
        <property name="text">
         <string>&lt;to&gt;</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1" colspan="2">
-      <widget class="QLabel" name="period_label">
-       <property name="text">
-        <string>&lt;period&gt;</string>
        </property>
       </widget>
      </item>
@@ -174,11 +194,23 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>156</width>
-          <height>276</height>
+          <width>182</width>
+          <height>268</height>
          </rect>
         </property>
        </widget>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QLabel" name="period_label">
+       <property name="font">
+        <font>
+         <pointsize>9</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>&lt;period&gt;</string>
+       </property>
       </widget>
      </item>
     </layout>
