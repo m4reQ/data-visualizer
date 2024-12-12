@@ -144,6 +144,12 @@ class GraphToolWindow(QMainWindow):
 
     def _set_plot_visible(self, series_name: str, is_shown: bool) -> None:
         widget = self.plot_widgets[series_name]
+        max_left_axis_width = max(
+            x._plot_widget.plotItem.getAxis('left').width()
+            for x in self.plot_widgets.values())
+
+        for _widget in self.plot_widgets.values():
+            _widget._plot_widget.plotItem.getAxis('left').setWidth(max_left_axis_width)
 
         if is_shown:
             widget.setVisible(True)
