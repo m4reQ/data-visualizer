@@ -69,8 +69,6 @@ class GraphToolWindow(QMainWindow):
         self.period_end_button.clicked.connect(self._end_date_changed_cb)
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(1)
 
         for column_name in data.columns:
             column = data[column_name]
@@ -78,13 +76,16 @@ class GraphToolWindow(QMainWindow):
                 column_name,
                 column.min(),
                 column.max())
+            widget.setContentsMargins(0, 0, 0, 0)
             widget.min_value_changed.connect(self._change_y_axis_min)
             widget.max_value_changed.connect(self._change_y_axis_max)
             widget.show_checked.connect(self._set_plot_visible)
 
             layout.addWidget(widget)
 
-        layout.addStretch()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addStretch(1)
 
         self.y_axis_controls.setLayout(layout)
 

@@ -2,8 +2,8 @@ import typing as t
 
 from PyQt6 import uic
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
-from PyQt6.QtWidgets import (QCheckBox, QDoubleSpinBox, QLabel, QScrollArea,
-                             QToolButton, QWidget)
+from PyQt6.QtWidgets import (QCheckBox, QDoubleSpinBox, QFrame, QLabel,
+                             QScrollArea, QToolButton, QWidget)
 
 _SeriesConfigWidgetClass: t.TypeAlias = uic.load_ui.loadUiType('./assets/uis/series_config_widget.ui')[0] # type: ignore
 
@@ -28,7 +28,7 @@ class SeriesConfigWidget(QWidget, _SeriesConfigWidgetClass):
         self.show_checkbox: QCheckBox
         self.max_spinbox: QDoubleSpinBox
         self.min_spinbox: QDoubleSpinBox
-        self.contents: QScrollArea
+        self.contents: QFrame
 
         self.name_label.setText(series_name)
 
