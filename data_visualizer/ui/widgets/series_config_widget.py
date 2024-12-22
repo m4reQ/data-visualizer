@@ -32,10 +32,8 @@ class SeriesConfigWidget(QWidget, _SeriesConfigWidgetClass):
 
         self.name_label.setText(series_name)
 
-        self.max_spinbox.setRange(y_min, y_max)
         self.max_spinbox.setValue(y_max)
         self.max_spinbox.valueChanged.connect(self._max_changed_cb)
-        self.min_spinbox.setRange(y_min, y_max)
         self.min_spinbox.setValue(y_min)
         self.min_spinbox.valueChanged.connect(self._min_changed_cb)
 
