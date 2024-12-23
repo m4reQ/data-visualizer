@@ -44,9 +44,13 @@ class MainWindow(QMainWindow):
         self.current_filepath: QLabel
         self.current_last_edited: QLabel
 
+        self.missing_rows_label: QLabel
+        self.longest_missing_period_label: QLabel
+        self.longest_missing_start_label: QLabel
+        self.longest_missing_end_label: QLabel
+
         # actions
         self.action_open: QAction
-        self.action_open_recent: QAction
         self.action_exit: QAction
         self.action_generate_graph: QAction
 
@@ -209,6 +213,13 @@ class MainWindow(QMainWindow):
         last_modified_time = datetime.datetime.fromtimestamp(os.path.getmtime(filepath))
         self.current_last_edited.setText(last_modified_time.strftime('%d/%m/%Y, %H:%M:%S'))
 
+        longest_start, longest_end, longest_length = _get_longest_missing_data_period(model.missing_ranges)
+        missing_rows_count = _get_missing_data_rows_count(model.missing_ranges)
+        self.missing_rows_label.setText(str(missing_rows_count))
+        self.longest_missing_period_label.setText(str(longest_length))
+        self.longest_missing_start_label.setText(longest_start.strftime('%d/%m/%Y, %H:%M:%S'))
+        self.longest_missing_end_label.setText(longest_end.strftime('%d/%m/%Y, %H:%M:%S'))
+
     def _create_tableview_for_model(self, model: PandasModel) -> QTableView:
         data_tableview = QTableView()
         data_tableview.setModel(model)
@@ -217,3 +228,10 @@ class MainWindow(QMainWindow):
 
         return data_tableview
 
+def _get_missing_data_rows_count(ranges: dict[str, pd.DataFrame]) -> int:
+    return int(next(iter(ranges.values())).length.sum())
+
+def _get_longest_missing_data_period(ranges: dict[str, pd.DataFrame]) -> tuple[datetime.datetime, datetime.datetime, int]:
+    checked_ranges = next(iter(ranges.values()))
+    start, end, length = checked_ranges.iloc[checked_ranges.length.argmax()]
+    return (start.to_pydatetime(), end.to_pydatetime(), int(length))
