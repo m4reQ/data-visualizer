@@ -11,6 +11,7 @@ from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import (QLabel, QMainWindow, QScrollArea, QToolButton,
                              QVBoxLayout, QWidget)
 
+from data_visualizer.models.pandas_model import PandasModel
 from data_visualizer.ui.widgets.calendar_dialog import CalendarDialog
 from data_visualizer.ui.widgets.plot_dock_widget import PlotDockWidget
 from data_visualizer.ui.widgets.series_config_widget import SeriesConfigWidget
@@ -25,7 +26,10 @@ class GraphToolWindow(QMainWindow):
     _SETTINGS_STATE_NAME = 'graph_state'
 
     @classmethod
-    def open_blocking(cls, parent: QWidget, settings: QSettings, data: pd.DataFrame) -> t.Self:
+    def open_blocking(cls,
+                      parent: QWidget,
+                      settings: QSettings,
+                      data: PandasModel) -> t.Self:
         win = cls(parent, settings, data)
         win.setWindowModality(Qt.WindowModality.ApplicationModal)
         win.show()
@@ -33,19 +37,24 @@ class GraphToolWindow(QMainWindow):
         return win
 
     @classmethod
-    def open(cls, parent: QWidget, settings: QSettings, data: pd.DataFrame) -> t.Self:
+    def open(cls,
+             parent: QWidget,
+             settings: QSettings,
+             data: PandasModel) -> t.Self:
         win = cls(parent, settings, data)
         win.show()
 
         return win
 
-    def __init__(self, parent: QWidget, settings: QSettings, data: pd.DataFrame) -> None:
+    def __init__(self, parent: QWidget, settings: QSettings, data: PandasModel) -> None:
         super().__init__(parent)
+
+        df = data.dataframe
 
         self.settings = settings
         self.data = data
-        self.min_date: datetime.date = self.data.index.min().date()
-        self.max_date: datetime.date = self.data.index.max().date()
+        self.min_date: datetime.date = df.index.min().date()
+        self.max_date: datetime.date = df.index.max().date()
         self.start_date = self.min_date
         self.end_date = self.max_date
         self.series = dict[str, pyqtgraph.PlotDataItem]()
@@ -70,8 +79,8 @@ class GraphToolWindow(QMainWindow):
 
         layout = QVBoxLayout()
 
-        for column_name in data.columns:
-            column = data[column_name]
+        for column_name in df.columns:
+            column = df[column_name]
             widget = SeriesConfigWidget(
                 column_name,
                 column.min(),
@@ -140,7 +149,7 @@ class GraphToolWindow(QMainWindow):
 
     def _reconfigure_plots(self) -> None:
         for plot_widget in self.plot_widgets.values():
-            plot_widget.set_data_range(self.start_date, self.end_date)
+            plot_widget.set_x_range(self.start_date, self.end_date)
 
     def _set_plot_visible(self, series_name: str, is_shown: bool) -> None:
         widget = self.plot_widgets[series_name]
@@ -181,11 +190,11 @@ def _build_period_length_str(start: datetime.date, end: datetime.date) -> str:
 def _format_date(date: datetime.date) -> str:
     return date.strftime(DATE_FORMAT)
 
-def _create_plot_widgets(data: pd.DataFrame,
+def _create_plot_widgets(data: PandasModel,
                          start_date: datetime.date,
                          end_date: datetime.date) -> dict[str, PlotDockWidget]:
-    x_axis_values = data.index.map(lambda x: x.timestamp())
-
+    # precompute timestamps here to save plot creation time
+    x_axis_values = data.dataframe.index.map(pd.Timestamp.timestamp)
     return {
-        k: PlotDockWidget(data[k], x_axis_values, start_date, end_date)
-        for k in data.columns}
+        k: PlotDockWidget(data, k, x_axis_values, start_date, end_date)
+        for k in data.dataframe.columns}

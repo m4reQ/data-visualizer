@@ -224,7 +224,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>&lt;filepath&gt;</string>
+        <string/>
        </property>
       </widget>
      </item>
@@ -237,7 +237,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>&lt;last_edited&gt;</string>
+        <string/>
        </property>
       </widget>
      </item>
@@ -250,7 +250,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>&lt;col_type&gt;</string>
+        <string/>
        </property>
       </widget>
      </item>
@@ -263,7 +263,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>&lt;columns&gt;</string>
+        <string/>
        </property>
       </widget>
      </item>
@@ -276,7 +276,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>&lt;col_name&gt;</string>
+        <string/>
        </property>
       </widget>
      </item>
@@ -289,12 +289,18 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>&lt;rows&gt;</string>
+        <string/>
        </property>
       </widget>
      </item>
      <item row="5" column="1">
       <widget class="QFrame" name="_unused14">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="frameShape">
         <enum>QFrame::StyledPanel</enum>
        </property>
@@ -323,7 +329,7 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>&lt;size&gt;</string>
+           <string/>
           </property>
          </widget>
         </item>
@@ -336,7 +342,7 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>&lt;size_unit&gt;</string>
+           <string/>
           </property>
          </widget>
         </item>

@@ -1,11 +1,13 @@
+import datetime
 import os
 
+import numpy as np
 import pandas as pd
 from PyQt6 import uic
 from PyQt6.QtCore import QSettings, QThreadPool, pyqtSlot
 from PyQt6.QtGui import QAction, QCloseEvent
-from PyQt6.QtWidgets import (QFileDialog, QLineEdit, QMainWindow, QTableView,
-                             QTabWidget)
+from PyQt6.QtWidgets import (QFileDialog, QLabel, QLineEdit, QMainWindow,
+                             QTableView, QTabWidget)
 
 from data_visualizer.data_importer import ImporterSettings, ImporterType
 from data_visualizer.models.pandas_model import PandasModel
@@ -28,11 +30,20 @@ class MainWindow(QMainWindow):
 
         self.settings = QSettings('m4reQ', 'data_visualizer')
         self.thread_pool = QThreadPool(self)
-        self.loading_window: LoadingWindow | None = None
 
         self.cur_value_edit: QLineEdit
         self.opened_editors: QTabWidget
         self.status_bar: StatusBar
+
+        # info
+        self.size: QLabel
+        self.size_unit: QLabel
+        self.current_col_type: QLabel
+        self.current_col_name: QLabel
+        self.current_columns: QLabel
+        self.current_rows: QLabel
+        self.current_filepath: QLabel
+        self.current_last_edited: QLabel
 
         # actions
         self.action_open: QAction
@@ -64,7 +75,7 @@ class MainWindow(QMainWindow):
         if state is not None:
             self.restoreState(state)
 
-    def _import_data(self, settings: ImporterSettings) -> tuple[pd.DataFrame, str]:
+    def _import_data(self, settings: ImporterSettings) -> PandasModel:
         data: pd.DataFrame
         match settings:
             case ImporterSettings(ImporterType.CSV, filepath, config):
@@ -84,14 +95,21 @@ class MainWindow(QMainWindow):
                     dtype=dtype,
                     date_format=config.datetime_format)
 
-        # TODO Unhardcode this
-        data.index = pd.to_datetime(data.index, utc=True)
+        dummy = pd.DataFrame(
+            np.nan,
+            index=pd.date_range(
+                data.index.min(),
+                data.index.max(),
+                freq='min'),
+            columns=data.columns)
+        dummy.index.name = data.index.name
+        result = dummy.combine_first(data)
 
-        return (data, settings.filepath)
+        return PandasModel(result, filepath)
 
-    def _create_tableview_for_dataframe(self, df: pd.DataFrame) -> QTableView:
+    def _create_tableview_for_model(self, model: PandasModel) -> QTableView:
         data_tableview = QTableView()
-        data_tableview.setModel(PandasModel(df))
+        data_tableview.setModel(model)
 
         horizontal_header = data_tableview.horizontalHeader()
         assert horizontal_header is not None
@@ -116,20 +134,28 @@ class MainWindow(QMainWindow):
         GraphToolWindow.open_blocking(
             self,
             self.settings,
-            self._get_current_data_model().get_data())
+            self._get_current_data_model())
 
     @pyqtSlot(Exception)
     def _exception_cb(self, exc: Exception) -> None:
         ErrorWindow.open_blocking(self, exc)
 
     @pyqtSlot(pd.DataFrame)
-    def _loading_finished_cb(self, data: tuple[pd.DataFrame, str]) -> None:
+    def _loading_finished_cb(self, data: PandasModel) -> None:
         self.opened_editors.addTab(
-            self._create_tableview_for_dataframe(data[0]),
-            os.path.basename(data[1]))
+            self._create_tableview_for_model(data),
+            os.path.basename(data.filepath))
 
-        if self.loading_window is not None:
-            self.loading_window.close()
+        self.size.setText(f'{(data.dataframe.memory_usage(index=True).sum() / 1_000):.2f}')
+        self.size_unit.setText('kB')
+        # self.current_col_type: QLabel
+        # self.current_col_name: QLabel
+        self.current_rows.setText(f'{data.dataframe.shape[0]}')
+        self.current_columns.setText(f'{data.dataframe.shape[1]}')
+        self.current_filepath.setText(data.filepath)
+
+        last_modified_time = datetime.datetime.fromtimestamp(os.path.getmtime(data.filepath))
+        self.current_last_edited.setText(last_modified_time.strftime('%d/%m/%Y, %H:%M:%S'))
 
         self.status_bar.clear_message()
 

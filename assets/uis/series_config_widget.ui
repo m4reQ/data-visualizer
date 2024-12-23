@@ -144,6 +144,12 @@
         <property name="decimals">
          <number>3</number>
         </property>
+        <property name="minimum">
+         <double>-100000.000000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>100000.000000000000000</double>
+        </property>
        </widget>
       </item>
       <item row="1" column="0">
@@ -168,6 +174,12 @@
        <widget class="QDoubleSpinBox" name="max_spinbox">
         <property name="decimals">
          <number>3</number>
+        </property>
+        <property name="minimum">
+         <double>-100000.000000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>100000.000000000000000</double>
         </property>
        </widget>
       </item>
