@@ -34,7 +34,7 @@ class PandasModel(QAbstractTableModel):
     def columnCount(self, _: QModelIndex = QModelIndex()) -> int:
         return self.dataframe.shape[1] + 1
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = 0) -> Any:
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = 0) -> str:
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 if section == 0:
@@ -44,6 +44,8 @@ class PandasModel(QAbstractTableModel):
 
             if orientation == Qt.Orientation.Vertical:
                 return str(section)
+
+        return super().headerData(section, orientation, role)
 
 def _get_series_missing_ranges(series: pd.Series) -> pd.DataFrame:
     missing = series.isnull()

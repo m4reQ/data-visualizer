@@ -4,7 +4,8 @@ import os
 import numpy as np
 import pandas as pd
 from PyQt6 import uic
-from PyQt6.QtCore import QSettings, QThreadPool, pyqtSlot
+from PyQt6.QtCore import (QItemSelection, QModelIndex, QSettings, Qt,
+                          QThreadPool, pyqtSlot)
 from PyQt6.QtGui import QAction, QCloseEvent
 from PyQt6.QtWidgets import (QFileDialog, QLabel, QLineEdit, QMainWindow,
                              QTableView, QTabWidget)
@@ -15,7 +16,6 @@ from data_visualizer.qt_job import Job
 from data_visualizer.ui.csv_import_window import CSVImportWindow
 from data_visualizer.ui.error_window import ErrorWindow
 from data_visualizer.ui.graph_window import GraphToolWindow
-from data_visualizer.ui.loading_window import LoadingWindow
 from data_visualizer.ui.status_bar import StatusBar, StatusBarStatus
 
 _UI_FILEPATH = './assets/uis/main_window.ui'
@@ -36,9 +36,8 @@ class MainWindow(QMainWindow):
         self.status_bar: StatusBar
 
         # info
-        self.size: QLabel
         self.size_unit: QLabel
-        self.current_col_type: QLabel
+        self.size_label: QLabel
         self.current_col_name: QLabel
         self.current_columns: QLabel
         self.current_rows: QLabel
@@ -50,29 +49,29 @@ class MainWindow(QMainWindow):
         self.action_open_recent: QAction
         self.action_exit: QAction
         self.action_generate_graph: QAction
-        self.action_generate_histogram: QAction
 
         uic.load_ui.loadUi(_UI_FILEPATH, self)
 
         self.action_exit.triggered.connect(self._exit_action_callback)
         self.action_open.triggered.connect(self._open_action_callback)
         self.action_generate_graph.triggered.connect(self._open_graph_window)
+        self.opened_editors.currentChanged.connect(self._editor_selection_changed)
 
         self._restore_geometry()
 
     def closeEvent(self, a0: QCloseEvent | None) -> None:
+        self._save_geometry()
+        super().closeEvent(a0)
+
+    def _save_geometry(self) -> None:
         self.settings.setValue(_SETTINGS_GEOMETRY_NAME, self.saveGeometry())
         self.settings.setValue(_SETTINGS_STATE_NAME, self.saveState())
 
-        super().closeEvent(a0)
-
     def _restore_geometry(self) -> None:
-        geometry = self.settings.value(_SETTINGS_GEOMETRY_NAME)
-        if geometry is not None:
+        if (geometry := self.settings.value(_SETTINGS_GEOMETRY_NAME)) is not None:
             self.restoreGeometry(geometry)
 
-        state = self.settings.value(_SETTINGS_STATE_NAME)
-        if state is not None:
+        if (state := self.settings.value(_SETTINGS_STATE_NAME)) is not None:
             self.restoreState(state)
 
     def _import_data(self, settings: ImporterSettings) -> PandasModel:
@@ -107,19 +106,6 @@ class MainWindow(QMainWindow):
 
         return PandasModel(result, filepath)
 
-    def _create_tableview_for_model(self, model: PandasModel) -> QTableView:
-        data_tableview = QTableView()
-        data_tableview.setModel(model)
-
-        horizontal_header = data_tableview.horizontalHeader()
-        assert horizontal_header is not None
-
-        horizontal_header.setStretchLastSection(True)
-
-        data_tableview.setHorizontalHeader(horizontal_header)
-
-        return data_tableview
-
     def _get_current_data_model(self) -> PandasModel:
         current_tab = self.opened_editors.currentWidget()
         assert isinstance(current_tab, QTableView)
@@ -128,6 +114,22 @@ class MainWindow(QMainWindow):
         assert isinstance(model, PandasModel)
 
         return model
+
+    @pyqtSlot(int)
+    def _editor_selection_changed(self, index: int) -> None:
+        if index == -1:
+            return
+
+        model = self._get_current_data_model()
+        self._update_info_tab(model)
+
+        selection: QItemSelection = self.opened_editors.currentWidget().selectionModel().selection() # type: ignore[union-attr]
+        if selection.count() == 0:
+            return
+
+        self._update_current_value_display(
+            model,
+            selection.indexes()[0])
 
     @pyqtSlot()
     def _open_graph_window(self) -> None:
@@ -146,17 +148,7 @@ class MainWindow(QMainWindow):
             self._create_tableview_for_model(data),
             os.path.basename(data.filepath))
 
-        self.size.setText(f'{(data.dataframe.memory_usage(index=True).sum() / 1_000):.2f}')
-        self.size_unit.setText('kB')
-        # self.current_col_type: QLabel
-        # self.current_col_name: QLabel
-        self.current_rows.setText(f'{data.dataframe.shape[0]}')
-        self.current_columns.setText(f'{data.dataframe.shape[1]}')
-        self.current_filepath.setText(data.filepath)
-
-        last_modified_time = datetime.datetime.fromtimestamp(os.path.getmtime(data.filepath))
-        self.current_last_edited.setText(last_modified_time.strftime('%d/%m/%Y, %H:%M:%S'))
-
+        self.action_generate_graph.setEnabled(True)
         self.status_bar.clear_message()
 
     @pyqtSlot(ImporterSettings)
@@ -188,3 +180,40 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def _exit_action_callback(self) -> None:
         self.close()
+
+    @pyqtSlot(QItemSelection, QItemSelection)
+    def _table_selection_changed(self, selected: QItemSelection, _) -> None:
+        if selected.count() == 0:
+            return
+
+        self._update_current_value_display(
+            self._get_current_data_model(),
+            selected.first().indexes()[0])
+
+    def _update_current_value_display(self, model: PandasModel, index: QModelIndex) -> None:
+        self.cur_value_edit.setText(str(model.data(index)))
+
+        column_name = model.headerData(index.column(), Qt.Orientation.Horizontal) # type: ignore[assignment]
+        self.current_col_name.setText(column_name)
+
+    def _update_info_tab(self, model: PandasModel) -> None:
+        dataframe = model.dataframe
+        filepath = model.filepath
+
+        self.size_label.setText(f'{(dataframe.memory_usage(index=True).sum() / 1_000):.2f}')
+        self.size_unit.setText('kB')
+        self.current_rows.setText(f'{dataframe.shape[0]}')
+        self.current_columns.setText(f'{dataframe.shape[1]}')
+        self.current_filepath.setText(filepath)
+
+        last_modified_time = datetime.datetime.fromtimestamp(os.path.getmtime(filepath))
+        self.current_last_edited.setText(last_modified_time.strftime('%d/%m/%Y, %H:%M:%S'))
+
+    def _create_tableview_for_model(self, model: PandasModel) -> QTableView:
+        data_tableview = QTableView()
+        data_tableview.setModel(model)
+        data_tableview.horizontalHeader().setStretchLastSection(True) # type: ignore[union-attr]
+        data_tableview.selectionModel().selectionChanged.connect(self._table_selection_changed) # type: ignore[union-attr]
+
+        return data_tableview
+
