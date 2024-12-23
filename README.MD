@@ -4,14 +4,13 @@
 
 # Installation
 
-To start installation first either download the source code from releases section or clone this repository with `git clone https://github.com/m4reQ/data-visualizer --recursive`. Then naviagate to the main project directory and download all dependencies.
+To start installation first either download the source code from releases section or clone this repository with `git clone https://github.com/m4reQ/data-visualizer --recursive`. Then naviagate to the main project directory and use one of the provided installation files:
 
-**Windows:** `pip install -r .\requirements.txt`
+**Windows:** `install.bat`
 
-**Linux / macos:** `python3 -m pip install -r ./requirements.txt`
+**Linux / macos:** `install.sh`
 
 Or follow the package installation guide of your specific Python environment.
-
 
 **Requirements:**
 
