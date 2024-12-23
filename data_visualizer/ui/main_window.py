@@ -1,5 +1,6 @@
 import datetime
 import os
+import typing as t
 
 import numpy as np
 import pandas as pd
@@ -16,20 +17,21 @@ from data_visualizer.qt_job import Job
 from data_visualizer.ui.csv_import_window import CSVImportWindow
 from data_visualizer.ui.error_window import ErrorWindow
 from data_visualizer.ui.graph_window import GraphToolWindow
+from data_visualizer.ui.settings_window import SettingsWindow
 from data_visualizer.ui.status_bar import StatusBar, StatusBarStatus
 
 _UI_FILEPATH = './assets/uis/main_window.ui'
-_SETTINGS_STATE_NAME = '_state'
-_SETTINGS_GEOMETRY_NAME = '_geometry'
+_SETTINGS_STATE_NAME = 'state_main_window'
+_SETTINGS_GEOMETRY_NAME = 'geometry_main_window'
 
 # TODO SEPARATION OF CONCERNS!!! (move logic from the ui)
 
 class MainWindow(QMainWindow):
-    def __init__(self) -> None:
+    def __init__(self, settings: QSettings) -> None:
         super().__init__()
 
-        self.settings = QSettings('m4reQ', 'data_visualizer')
         self.thread_pool = QThreadPool(self)
+        self.settings = settings
 
         self.cur_value_edit: QLineEdit
         self.opened_editors: QTabWidget
@@ -53,12 +55,15 @@ class MainWindow(QMainWindow):
         self.action_open: QAction
         self.action_exit: QAction
         self.action_generate_graph: QAction
+        self.action_settings: QAction
 
         uic.load_ui.loadUi(_UI_FILEPATH, self)
 
         self.action_exit.triggered.connect(self._exit_action_callback)
         self.action_open.triggered.connect(self._open_action_callback)
         self.action_generate_graph.triggered.connect(self._open_graph_window)
+        self.action_settings.triggered.connect(self._settings_action_callback)
+
         self.opened_editors.currentChanged.connect(self._editor_selection_changed)
 
         self._restore_geometry()
@@ -119,6 +124,12 @@ class MainWindow(QMainWindow):
 
         return model
 
+    @pyqtSlot()
+    def _settings_action_callback(self) -> None:
+        window = SettingsWindow(self.settings, self)
+        window.setWindowModality(Qt.WindowModality.ApplicationModal)
+        window.show()
+
     @pyqtSlot(int)
     def _editor_selection_changed(self, index: int) -> None:
         if index == -1:
@@ -137,10 +148,12 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def _open_graph_window(self) -> None:
-        GraphToolWindow.open_blocking(
-            self,
+        window = GraphToolWindow(
+            self._get_current_data_model(),
             self.settings,
-            self._get_current_data_model())
+            self)
+        window.setWindowModality(Qt.WindowModality.ApplicationModal)
+        window.show()
 
     @pyqtSlot(Exception)
     def _exception_cb(self, exc: Exception) -> None:
@@ -235,3 +248,4 @@ def _get_longest_missing_data_period(ranges: dict[str, pd.DataFrame]) -> tuple[d
     checked_ranges = next(iter(ranges.values()))
     start, end, length = checked_ranges.iloc[checked_ranges.length.argmax()]
     return (start.to_pydatetime(), end.to_pydatetime(), int(length))
+

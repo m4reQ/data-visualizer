@@ -1,6 +1,5 @@
 import datetime
 import io
-import typing as t
 
 import pandas as pd
 import pyqtgraph  # type: ignore[import-untyped]
@@ -18,35 +17,13 @@ from data_visualizer.ui.widgets.series_config_widget import SeriesConfigWidget
 
 # TODO Use single GraphicsLayoutWidget (possibly with ScrollArea) to display mutliple plots and gain some performance
 
-DATE_FORMAT = '%d.%m.%Y'
+_DATE_FORMAT = '%d.%m.%Y'
+_UI_FILEPATH = './assets/uis/graph_ex_window.ui'
+_SETTINGS_GEOMETRY_NAME = 'geometry_graph'
+_SETTINGS_STATE_NAME = 'state_graph'
 
 class GraphToolWindow(QMainWindow):
-    UI_FILEPATH = './assets/uis/graph_ex_window.ui'
-    _SETTINGS_GEOMETRY_NAME = 'graph_geometry'
-    _SETTINGS_STATE_NAME = 'graph_state'
-
-    @classmethod
-    def open_blocking(cls,
-                      parent: QWidget,
-                      settings: QSettings,
-                      data: PandasModel) -> t.Self:
-        win = cls(parent, settings, data)
-        win.setWindowModality(Qt.WindowModality.ApplicationModal)
-        win.show()
-
-        return win
-
-    @classmethod
-    def open(cls,
-             parent: QWidget,
-             settings: QSettings,
-             data: PandasModel) -> t.Self:
-        win = cls(parent, settings, data)
-        win.show()
-
-        return win
-
-    def __init__(self, parent: QWidget, settings: QSettings, data: PandasModel) -> None:
+    def __init__(self, data: PandasModel, settings: QSettings, parent: QWidget) -> None:
         super().__init__(parent)
 
         df = data.dataframe
@@ -58,7 +35,7 @@ class GraphToolWindow(QMainWindow):
         self.start_date = self.min_date
         self.end_date = self.max_date
         self.series = dict[str, pyqtgraph.PlotDataItem]()
-        self.plot_widgets = _create_plot_widgets(data, self.start_date, self.end_date)
+        self.plot_widgets = self._create_plot_widgets()
 
         self.period_label: QLabel
         self.period_end_button: QToolButton
@@ -67,7 +44,7 @@ class GraphToolWindow(QMainWindow):
         self.period_start_label: QLabel
         self.y_axis_controls: QScrollArea
 
-        uic.load_ui.loadUi(self.UI_FILEPATH, self)
+        uic.load_ui.loadUi(_UI_FILEPATH, self)
 
         self._restore_geometry()
 
@@ -99,8 +76,8 @@ class GraphToolWindow(QMainWindow):
         self.y_axis_controls.setLayout(layout)
 
     def closeEvent(self, a0: QCloseEvent | None) -> None:
-        self.settings.setValue(self._SETTINGS_GEOMETRY_NAME, self.saveGeometry())
-        self.settings.setValue(self._SETTINGS_STATE_NAME, self.saveState())
+        self.settings.setValue(_SETTINGS_GEOMETRY_NAME, self.saveGeometry())
+        self.settings.setValue(_SETTINGS_STATE_NAME, self.saveState())
 
         super().closeEvent(a0)
 
@@ -139,11 +116,11 @@ class GraphToolWindow(QMainWindow):
         self.plot_widgets[series_name].set_y_max(value)
 
     def _restore_geometry(self) -> None:
-        geometry = self.settings.value(self._SETTINGS_GEOMETRY_NAME)
+        geometry = self.settings.value(_SETTINGS_GEOMETRY_NAME)
         if geometry is not None:
             self.restoreGeometry(geometry)
 
-        state = self.settings.value(self._SETTINGS_STATE_NAME)
+        state = self.settings.value(_SETTINGS_STATE_NAME)
         if state is not None:
             self.restoreState(state)
 
@@ -165,6 +142,19 @@ class GraphToolWindow(QMainWindow):
             self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, widget)
         else:
             self.removeDockWidget(widget)
+
+    def _create_plot_widgets(self) -> dict[str, PlotDockWidget]:
+        # precompute timestamps here to save plot creation time
+        x_axis_values = self.data.dataframe.index.map(pd.Timestamp.timestamp)
+        return {
+            k: PlotDockWidget(
+                self.settings,
+                self.data,
+                k,
+                x_axis_values,
+                self.start_date,
+                self.end_date)
+            for k in self.data.dataframe.columns}
 
 def _build_period_length_str(start: datetime.date, end: datetime.date) -> str:
     string_builder = io.StringIO()
@@ -188,13 +178,4 @@ def _build_period_length_str(start: datetime.date, end: datetime.date) -> str:
     return string_builder.getvalue()
 
 def _format_date(date: datetime.date) -> str:
-    return date.strftime(DATE_FORMAT)
-
-def _create_plot_widgets(data: PandasModel,
-                         start_date: datetime.date,
-                         end_date: datetime.date) -> dict[str, PlotDockWidget]:
-    # precompute timestamps here to save plot creation time
-    x_axis_values = data.dataframe.index.map(pd.Timestamp.timestamp)
-    return {
-        k: PlotDockWidget(data, k, x_axis_values, start_date, end_date)
-        for k in data.dataframe.columns}
+    return date.strftime(_DATE_FORMAT)

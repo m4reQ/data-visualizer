@@ -5,7 +5,7 @@ import typing as t
 
 import pandas as pd
 import pyqtgraph  # type: ignore[import-untyped]
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtGui import QBrush, QColor, QPen
 from PyQt6.QtWidgets import QDockWidget, QSizePolicy, QWidget
 
@@ -19,6 +19,7 @@ _MAX_PEN_COLOR = 255
 
 class PlotDockWidget(QDockWidget):
     def __init__(self,
+                 settings: QSettings,
                  model: PandasModel,
                  series_name: str,
                  x_axis_values: t.Iterable[t.SupportsInt],
@@ -34,8 +35,12 @@ class PlotDockWidget(QDockWidget):
 
         self._plot_widget = pyqtgraph.PlotWidget()
         self._plot_widget.plotItem.setAxisItems({'bottom': pyqtgraph.DateAxisItem(orientation='bottom')})
-        self._plot_widget.plotItem.showGrid(True, True, 0.5) # TODO Unhardcode plot grid opacity
+        self._plot_widget.plotItem.showGrid(True, True, settings.value('graph_grid_opacity', 0.5, float))
         self._plot_widget.plotItem.addLegend()
+
+        theme = settings.value('graph_theme', 'light', str)
+        if theme == 'light':
+            self._plot_widget.setBackground('white')
 
         self.setWidget(self._plot_widget)
 
@@ -45,16 +50,12 @@ class PlotDockWidget(QDockWidget):
                 x_axis_values,
                 model.dataframe[series_name],
                 connect='finite',
-                pen=_create_random_color_pen(),
+                pen=_create_random_color_pen(theme == 'light'),
                 name=series_name)
 
-        datetime_offset = _get_series_utc_offset(series)
         for _, row in model.missing_ranges[series_name].iterrows():
             self._plot_item.addItem(
                 pyqtgraph.LinearRegionItem(
-                    # values=(
-                    #     _datetime_to_unix_timestamp(_range.start + datetime_offset),
-                    #     _datetime_to_unix_timestamp(_range.end + datetime_offset)),
                     values=(
                         _datetime_to_unix_timestamp(row.start),
                         _datetime_to_unix_timestamp(row.end)),
@@ -63,7 +64,11 @@ class PlotDockWidget(QDockWidget):
                     movable=False))
 
         margins = self._plot_widget.plotItem.getContentsMargins()
-        self._plot_widget.plotItem.setContentsMargins(margins[0], margins[1], 15.0, margins[3]) # TODO Unhardcode margin width
+        self._plot_widget.plotItem.setContentsMargins(
+            margins[0],
+            margins[1],
+            settings.value('graph_vertical_margin', 15, int),
+            margins[3])
 
         self.set_x_range(x_min, x_max)
         self.set_y_min(series.min())
@@ -104,14 +109,15 @@ def _get_random_qt_color(_min: int, _max: int) -> QColor:
         int(random.uniform(_min, _max)),
         int(random.uniform(_min, _max)))
 
-def _create_random_color_pen() -> QPen:
-    return pyqtgraph.mkPen(
-        color=_get_random_qt_color(_MIN_PEN_COLOR, _MAX_PEN_COLOR),
-        style=Qt.PenStyle.SolidLine)
+def _create_random_color_pen(use_dark_colors: bool) -> QPen:
+    if use_dark_colors:
+        color = _get_random_qt_color(0, 180)
+    else:
+        color = _get_random_qt_color(128, 255)
 
-def _get_series_utc_offset(series: pd.Series) -> datetime.timedelta:
-    # assume all rows have the same timezone
-    return series.index[0].to_pydatetime().tzinfo.utcoffset(None)
+    return pyqtgraph.mkPen(
+        color=color,
+        style=Qt.PenStyle.SolidLine)
 
 def _datetime_to_unix_timestamp(value: datetime.datetime | datetime.date) -> float:
     return time.mktime(value.timetuple())
