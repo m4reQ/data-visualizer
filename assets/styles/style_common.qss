@@ -1,0 +1,13 @@
+QMainWindow#settingsWindow QLabel {
+    font: 10px "Ms Shell Dlg", serif
+}
+
+QMainWindow#settingsWindow QLabel#header {
+    font-size: 14px;
+}
+
+QMainWindow#settingsWindow .SettingsHeaderLabel {
+    font-size: 7px;
+    font-style: italic;
+    color: #8a8a8a;
+}
